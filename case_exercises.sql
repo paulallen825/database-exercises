@@ -36,3 +36,19 @@ SELECT
 	COUNT(*) as num_of_bdays
 FROM employees
 GROUP BY decade;
+
+select first_name, last_name, dept_no, salary
+from employees
+join dept_emp using (emp_no)
+join salaries using (emp_no)
+where salaries.to_date > curdate() and dept_no = 'd009'
+;
+
+SELECT de.emp_no,
+    MAX(dnum.dept_no) as "Department Number",
+    MIN(de.from_date) as "Start Date", MAX(de.to_date) as "End Date",
+    IF (MAX(de.to_date) > NOW(), TRUE, FALSE) is_current_employee
+FROM dept_emp de
+LEFT JOIN (SELECT dept_no, emp_no FROM dept_emp
+WHERE to_date = (SELECT MAX(to_date) FROM dept_emp)) dnum using (emp_no)
+GROUP BY emp_no;
