@@ -4,6 +4,8 @@
 
 use germain_1474;
 
+drop table employees_with_departments;
+
 create temporary table employees_with_departments as
 select employees.first_name, employees.last_name,departments.dept_name
 from employees.employees
@@ -50,27 +52,71 @@ select * from New_Sakila;							#selecting all the data to make sure it looks ri
 
 describe New_Sakila;								#using describe to make sure it shows INT for amount
 
+drop table New_Sakila;
 #3
 #Find out how the current average pay in each department compares to the overall, historical average pay. In order to make the comparison easier, you should use the Z-score for salaries. In terms of salary, what is the best department right now to work for? The worst?
+
+#STEP 1 - CREATING THE AVERAGE SALARY FOR EACH DEPARTMENT
+use germain_1474;
+drop table dept_average;
+
 create temporary table dept_average as 
 select departments.dept_name,
  avg(salaries.salary) as avg_salary
 from employees.employees
-
 join employees.dept_emp using (emp_no)
 join employees.salaries using (emp_no)
 join employees.departments using (dept_no)
-
 where salaries.to_date >= curdate()
+and dept_emp.to_date >= curdate()
 group by dept_name;
-
-
-select avg(avg_salary) from dept_average;
-
-select avg_salary, avg_salary - (select avg(avg_salary) from dept_average)as 'numerator' from dept_average;
-#(select std(avg_salary)from dept_average) as 'denominator'
-#from dept_average;
 
 select * from dept_average;
 
 
+#step 2- add zscore column
+
+ALTER TABLE dept_average ADD zscore float(10,3);
+
+#STEP 3 - CALCULATE THE Z SCORE
+-- UPDATE dept_average 
+-- SET zscore = 
+
+select avg_salary,
+avg_salary - (select avg(average_salary)from dept_average)
+from dept_average;
+
+#((avg_salary - (SELECT avg(avg_salary) FROM employees.salaries )) / (SELECT STDDEV(salaries.salary)FROM employees.salaries as s));
+
+
+
+
+
+
+CREATE TEMPORARY TABLE avg_sal_dept as
+SELECT d.dept_name as 'dept_name',
+AVG(s.salary) as "avg_dept_sal"
+FROM employees.salaries as s
+JOIN employees.dept_emp as de
+  ON de.emp_no = s.emp_no
+  AND de.to_date >= NOW()
+  AND s.to_date >= NOW()
+JOIN employees.departments as d
+  ON d.dept_no = de.dept_no
+GROUP BY dept_name;
+
+SELECT * FROM avg_sal_dept;
+ORDER BY zscore desc;
+
+ALTER TABLE avg_sal_dept ADD zscore float(10,3);
+
+UPDATE avg_sal_dept 
+SET zscore = ((avg_dept_sal - 
+  (
+  SELECT avg(s.salary) FROM
+  employees.salaries as s)) / 
+    (
+    SELECT STDDEV(salaries.salary)
+    FROM employees.salaries
+    )
+  );
